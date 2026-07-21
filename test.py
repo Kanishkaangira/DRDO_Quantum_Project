@@ -1,15 +1,13 @@
 from qiskit import QuantumCircuit
 from qiskit_aer import AerSimulator
-from qiskit.visualization import plot_histogram
 
-# Create a simple quantum circuit
-qc = QuantumCircuit(1)
+qc = QuantumCircuit(2)
 qc.h(0)
+qc.cx(0, 1)
 qc.measure_all()
 
-# Run the circuit on the simulator
-sim = AerSimulator()
-result = sim.run(qc, shots=10000).result()
-
-
-print(result.get_counts())
+simulator = AerSimulator()
+job = simulator.run(qc, shots=1000)
+result = job.result()
+counts = result.get_counts()
+print(counts)

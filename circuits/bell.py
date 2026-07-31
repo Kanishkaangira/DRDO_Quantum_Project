@@ -3,7 +3,7 @@
 from qiskit import QuantumCircuit
 
 
-def build_bell_circuit(num_qubits: int = 2) -> QuantumCircuit:
+def build_bell_circuit(num_qubits: int) -> QuantumCircuit:
     """Build the fixed two-qubit Bell-state circuit with final measurements."""
     if num_qubits != 2:
         raise ValueError("Bell circuits require exactly 2 qubits.")

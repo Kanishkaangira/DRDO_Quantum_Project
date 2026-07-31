@@ -4,7 +4,7 @@ from collections.abc import Callable
 
 from qiskit_aer.noise import NoiseModel, QuantumError
 
-SINGLE_QUBIT_GATES = ("h", "rx", "ry", "rz")
+SINGLE_QUBIT_GATES = ("h", "x", "y", "rx", "ry", "rz", "sx")
 TWO_QUBIT_GATES = ("cx", "cp", "swap")
 
 

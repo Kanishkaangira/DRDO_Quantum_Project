@@ -1,15 +1,13 @@
 """Ring-MaxCut QAOA benchmark circuit."""
 
-from math import pi
-
 from qiskit import QuantumCircuit
 
 
 def build_qaoa_circuit(
     num_qubits: int,
     repetitions: int,
-    gamma: float = pi / 4,
-    beta: float = pi / 8,
+    gamma: float,
+    beta: float,
 ) -> QuantumCircuit:
     """Build a deterministic QAOA circuit for MaxCut on a ring graph."""
     if num_qubits < 2:

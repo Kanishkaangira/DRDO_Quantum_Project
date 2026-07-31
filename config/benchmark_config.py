@@ -16,6 +16,8 @@ This file does not decide loop ORDER -- that's benchmark/runner.py's job
 exist to loop over.
 """
 
+from math import pi
+
 from .settings import DEFAULT_N_RUNS
 
 # SECTION 1: STUDY COMPONENTS
@@ -77,9 +79,9 @@ CIRCUIT_BUILD_PARAMETERS = {
         {"ansatz_repetitions": 3},
     ],
     "qaoa": [
-        {"repetitions": 1},
-        {"repetitions": 2},
-        {"repetitions": 3},
+        {"repetitions": 1, "gamma": pi / 4, "beta": pi / 8},
+        {"repetitions": 2, "gamma": pi / 4, "beta": pi / 8},
+        {"repetitions": 3, "gamma": pi / 4, "beta": pi / 8},
     ],
 }
 
@@ -152,3 +154,10 @@ def get_active_noise_strengths(noise_model: str) -> list[float]:
         return ACTIVE_NOISE_STRENGTHS_BY_MODEL[noise_model]
     except KeyError as error:
         raise ValueError(f"No noise strengths are configured for: {noise_model}") from error
+
+
+def get_active_circuit_build_parameters(circuit_name: str) -> list[dict[str, object]]:
+    """Return independent concrete build requests for one active circuit."""
+    if circuit_name not in ACTIVE_CIRCUITS:
+        raise ValueError(f"Circuit is not active: {circuit_name}")
+    return [parameters.copy() for parameters in CIRCUIT_BUILD_PARAMETERS[circuit_name]]

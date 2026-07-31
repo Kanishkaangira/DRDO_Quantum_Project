@@ -15,6 +15,8 @@ def build_qft_circuit(
         raise ValueError("QFT circuits require at least 2 qubits.")
     if approximation_degree < 0:
         raise ValueError("approximation_degree must be non-negative.")
+    if approximation_degree >= num_qubits:
+        raise ValueError("approximation_degree must be smaller than num_qubits.")
 
     circuit = QuantumCircuit(num_qubits, num_qubits, name=f"qft_{num_qubits}")
     for target_qubit in range(num_qubits - 1, -1, -1):

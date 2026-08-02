@@ -85,6 +85,8 @@ CIRCUIT_BUILD_PARAMETERS = {
     ],
 }
 
+ENABLE_CIRCUIT_BUILD_PARAMETER_SWEEP = True
+
 # Only meaningful when Backend == "aer" -- real IBM hardware has its own
 # physical noise and cannot take an injected NoiseModel (Section 8.1, step 5)
 NOISE_STRENGTHS_BY_MODEL = {
@@ -157,7 +159,10 @@ def get_active_noise_strengths(noise_model: str) -> list[float]:
 
 
 def get_active_circuit_build_parameters(circuit_name: str) -> list[dict[str, object]]:
-    """Return independent concrete build requests for one active circuit."""
+    """Return approved active build requests for one circuit."""
     if circuit_name not in ACTIVE_CIRCUITS:
         raise ValueError(f"Circuit is not active: {circuit_name}")
-    return [parameters.copy() for parameters in CIRCUIT_BUILD_PARAMETERS[circuit_name]]
+    parameter_sets = CIRCUIT_BUILD_PARAMETERS[circuit_name]
+    if not ENABLE_CIRCUIT_BUILD_PARAMETER_SWEEP:
+        return [parameter_sets[0].copy()]
+    return [parameters.copy() for parameters in parameter_sets]

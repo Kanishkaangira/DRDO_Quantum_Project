@@ -2,9 +2,6 @@
 
 from collections.abc import Mapping
 
-# VQE energy evaluation is deferred until the architecture defines its Hamiltonian.
-
-
 def calculate_z_parity_expectation(counts: Mapping[str, int]) -> float:
     """Calculate the all-qubit Z-parity expectation from measurement counts."""
     total_shots = sum(counts.values())
@@ -43,3 +40,25 @@ def calculate_ring_maxcut_expectation(counts: Mapping[str, int]) -> float:
             cut_edges += bits[-1] != bits[0]
         weighted_cost += count * cut_edges
     return weighted_cost / total_shots
+
+
+def calculate_ring_ising_energy(
+    counts: Mapping[str, int], *, coupling: float, field: float
+) -> float:
+    """Calculate a diagonal ring-Ising VQE energy from Z-basis samples."""
+    total_shots = sum(counts.values())
+    if total_shots <= 0:
+        raise ValueError("counts must contain at least one shot.")
+
+    weighted_energy = 0.0
+    for bitstring, count in counts.items():
+        bits = bitstring.replace(" ", "")
+        if len(bits) < 2:
+            raise ValueError("Ring-Ising evaluation requires at least two qubits.")
+        spins = [1 if bit == "0" else -1 for bit in bits]
+        interaction = sum(
+            spins[index] * spins[(index + 1) % len(spins)]
+            for index in range(len(spins))
+        )
+        weighted_energy += count * (coupling * interaction + field * sum(spins))
+    return weighted_energy / total_shots

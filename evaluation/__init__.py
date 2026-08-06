@@ -4,6 +4,7 @@ from .comparison import ComparisonMetrics, compare_to_baseline
 from .error_metrics import ErrorMetrics, calculate_error_metrics, calculate_total_variation_distance
 from .expectation import (
     calculate_expectation_absolute_error,
+    calculate_ring_ising_energy,
     calculate_ring_maxcut_expectation,
     calculate_z_parity_expectation,
 )
@@ -19,6 +20,7 @@ __all__ = [
     "calculate_error_metrics",
     "calculate_expectation_absolute_error",
     "calculate_overhead",
+    "calculate_ring_ising_energy",
     "calculate_ring_maxcut_expectation",
     "calculate_total_variation_distance",
     "calculate_z_parity_expectation",

@@ -2,3 +2,4 @@ qiskit
 qiskit-aer
 qiskit-ibm-runtime
 numpy
+pandas

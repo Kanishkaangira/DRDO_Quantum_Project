@@ -1,1 +1,4 @@
-
+circuit,qubits,circuit_build_parameters,backend,noise_model,noise_strength,shots_per_execution,n_configurations_compared,suppression_mode,mitigation_technique,rank,n_runs,original_depth,evaluated_depth,original_gate_count,evaluated_gate_count,depth_overhead_mean,gate_count_overhead_mean,execution_time_mean,runtime_overhead_mean,sampling_overhead_mean,fidelity_mean,fidelity_std,error_reduction_percentage,efficiency_score,baseline_fidelity_mean
+bell,2,,aer,depolarizing,0.001,1000,1,none,,1,1,3,3,,,,,0.6726345999923069,4.41904097438479,1.0,0.9979837978600123,,0.0,,0.9979837978600123
+bell,2,{},aer,depolarizing,0.001,100,2,none,m3,1,1,3,3,4.0,4.0,1.0,1.0,14.791735400096512,124.56554882768144,5.0,0.9996935916467664,,,,
+bell,2,{},aer,depolarizing,0.001,100,2,none,zne,2,1,3,3,4.0,4.0,1.0,1.0,14.73263720003888,124.06786552509485,4.0,0.9995993587170228,,,,

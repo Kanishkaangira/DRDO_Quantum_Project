@@ -32,6 +32,38 @@ SUPPRESSION_MODES = ["none", "pauli_twirl", "dd", "both"]
 
 MITIGATION_TECHNIQUES = ["m3", "trex", "zne", "pec", "cdr"]
 
+# VQE is evaluated against this diagonal ring-Ising Hamiltonian. Its terms are
+# measurable from the circuits' Z-basis samples, so noisy and ideal energies
+# are compared without substituting the unrelated global Z-parity metric.
+VQE_HAMILTONIAN = {"coupling": 1.0, "field": 0.5}
+
+# Per-technique settings used for every individual experiment. These are kept
+# beside CIRCUIT_BUILD_PARAMETERS so the CSV can state exactly which technique
+# configuration produced each result.
+SUPPRESSION_PARAMETERS = {
+    "none": {},
+    "pauli_twirl": {"seed_source": "run_seed", "twirled_gate": "cx"},
+    "dd": {"dd_sequence": ["x", "x"], "scheduling_method": "alap"},
+    "both": {
+        "seed_source": "run_seed",
+        "twirled_gate": "cx",
+        "dd_sequence": ["x", "x"],
+        "scheduling_method": "alap",
+    },
+}
+
+MITIGATION_PARAMETERS = {
+    "m3": {"calibration_basis": "computational"},
+    "trex": {"calibration_state": "all_zero"},
+    "zne": {"scale_factors": [1.0, 3.0, 5.0], "extrapolation_degree": 2},
+    "pec": {
+        "sample_count": 8,
+        "implementation": "pauli_twirled_quasi_probability",
+        "noise_approximation": "effective_depolarizing",
+    },
+    "cdr": {"training_circuit_count": 4, "angle_snap": "pi_over_2"},
+}
+
 EXPERIMENTAL_CONDITIONS = {
     "baseline": {"suppression_modes": ["none"], "mitigation_techniques": []},
     "suppression_only": {

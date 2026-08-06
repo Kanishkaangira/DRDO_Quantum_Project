@@ -3,6 +3,7 @@
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from math import ceil, floor, pi
+from random import Random
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -10,8 +11,13 @@ import numpy as np
 from qiskit import QuantumCircuit
 from qiskit_aer.noise import NoiseModel
 
+from config.benchmark_config import VQE_HAMILTONIAN
 from config.settings import SEED, SEED_STRIDE
-from evaluation import calculate_ring_maxcut_expectation, calculate_z_parity_expectation
+from evaluation import (
+    calculate_ring_ising_energy,
+    calculate_ring_maxcut_expectation,
+    calculate_z_parity_expectation,
+)
 from execution import execute_aer
 from mitigation import apply_mitigation
 from suppression import apply_pauli_twirling
@@ -107,7 +113,7 @@ def _calculate_case_expectation(
     if case.circuit_name == "qaoa":
         return calculate_ring_maxcut_expectation(counts)
     if case.circuit_name == "vqe":
-        raise NotImplementedError("VQE requires a Hamiltonian-specific expectation.")
+        return calculate_ring_ising_energy(counts, **VQE_HAMILTONIAN)
     return calculate_z_parity_expectation(counts)
 
 
@@ -162,41 +168,45 @@ def build_pec_samples(
     *,
     sample_count: int = PEC_SAMPLE_COUNT,
 ) -> dict[str, Sequence[float] | Sequence[int] | float]:
-    """Execute placeholder Pauli-twirled samples through the tracked executor.
-
-    This is not full probabilistic error cancellation: it uses unit signs and
-    unit sampling overhead until learned/quasi-probability decomposition data
-    is available.
-    """
+    """Execute signed Pauli-twirled samples for effective-depolarizing PEC."""
     if sample_count < 1:
         raise ValueError("PEC sample_count must be at least 1.")
+    if case.noise_strength is None:
+        raise ValueError("PEC requires a configured noise strength.")
+
+    shrinkage = 1 - 4 * case.noise_strength / 3
+    if shrinkage <= 0:
+        raise ValueError("PEC requires a noise strength below 0.75.")
+    identity_weight = (1 + 3 / shrinkage) / 4
+    pauli_weight = (1 - 1 / shrinkage) / 4
+    quasi_probabilities = (identity_weight, pauli_weight, pauli_weight, pauli_weight)
+    sampling_overhead = sum(abs(weight) for weight in quasi_probabilities)
+    selection_weights = [abs(weight) / sampling_overhead for weight in quasi_probabilities]
 
     sampled_expectations = []
+    sampling_signs = []
     for sample_index in range(sample_count):
         seed = auxiliary_seed(case, "pec", sample_index)
-        sampled_circuit = apply_pauli_twirling(
-            circuit, seed=seed
-        )
+        sampled_weight = Random(seed).choices(quasi_probabilities, selection_weights)[0]
+        sampled_circuit = apply_pauli_twirling(circuit, seed=seed)
         sampled_expectations.append(
             _calculate_case_expectation(
                 case,
                 execute_condition(sampled_circuit, seed),
             )
         )
+        sampling_signs.append(1 if sampled_weight >= 0 else -1)
     return {
         "sampled_expectations": sampled_expectations,
-        "sampling_signs": [1] * sample_count,
-        "sampling_overhead": 1.0,
+        "sampling_signs": sampling_signs,
+        "sampling_overhead": sampling_overhead,
     }
 
 
 def _near_clifford_circuit(circuit: QuantumCircuit, variant_index: int) -> QuantumCircuit:
-    """Create an angle-snapped training circuit for variational ansatz circuits.
-
-    Only RX, RY, and RZ gates are changed, so CDR training variants are
-    meaningful for VQE/QAOA only; Bell, GHZ, and QFT circuits remain identical.
-    """
+    """Create a distinct near-Clifford training circuit for CDR regression."""
     training_circuit = circuit.copy_empty_like(name=f"{circuit.name}_cdr_{variant_index}")
+    non_measurement_gate_index = 0
     for instruction in circuit.data:
         operation = instruction.operation
         if operation.name in {"rx", "ry", "rz"}:
@@ -211,10 +221,29 @@ def _near_clifford_circuit(circuit: QuantumCircuit, variant_index: int) -> Quant
             getattr(training_circuit, operation.name)(
                 snapped_turns * pi / 2, instruction.qubits[0]
             )
+        elif operation.name == "cp":
+            angle = float(operation.params[0])
+            half_turn = angle / pi
+            if variant_index % 3 == 0:
+                snapped_turns = round(half_turn)
+            elif variant_index % 3 == 1:
+                snapped_turns = floor(half_turn)
+            else:
+                snapped_turns = ceil(half_turn)
+            training_circuit.cp(
+                snapped_turns * pi, instruction.qubits[0], instruction.qubits[1]
+            )
+        elif operation.name != "measure" and (
+            variant_index > 0 and (non_measurement_gate_index + variant_index) % 3 == 0
+        ):
+            non_measurement_gate_index += 1
+            continue
         else:
             training_circuit.append(
                 operation, instruction.qubits, instruction.clbits
             )
+        if operation.name != "measure":
+            non_measurement_gate_index += 1
     return training_circuit
 
 
@@ -262,12 +291,29 @@ def provide_auxiliary_data(
 ) -> dict[str, Any]:
     """Provide tracked additional-execution data for the selected mitigation technique."""
     del raw_execution
+    parameters = case.mitigation_parameters[technique]
     if technique == "zne":
-        return build_zne_scaled_expectations(case, circuit, execute_condition)
+        return build_zne_scaled_expectations(
+            case,
+            circuit,
+            execute_condition,
+            scale_factors=parameters["scale_factors"],
+            extrapolation_degree=parameters["extrapolation_degree"],
+        )
     if technique == "pec":
-        return build_pec_samples(case, circuit, execute_condition)
+        return build_pec_samples(
+            case,
+            circuit,
+            execute_condition,
+            sample_count=parameters["sample_count"],
+        )
     if technique == "cdr":
-        return build_cdr_training_data(case, circuit, execute_condition)
+        return build_cdr_training_data(
+            case,
+            circuit,
+            execute_condition,
+            training_circuit_count=parameters["training_circuit_count"],
+        )
     raise ValueError(f"Unsupported auxiliary mitigation technique: {technique}")
 
 

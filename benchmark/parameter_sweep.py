@@ -11,6 +11,8 @@ from config.benchmark_config import (
     ACTIVE_NOISE_MODELS,
     ACTIVE_SHOT_VALUES,
     EXPERIMENTAL_CONDITIONS,
+    MITIGATION_PARAMETERS,
+    SUPPRESSION_PARAMETERS,
     get_active_circuit_build_parameters,
     get_active_noise_strengths,
     get_active_qubit_counts,
@@ -31,7 +33,9 @@ class BenchmarkCase:
     run_index: int
     condition_name: str
     suppression_mode: str
+    suppression_parameters: Mapping[str, object]
     mitigation_techniques: tuple[str, ...]
+    mitigation_parameters: Mapping[str, Mapping[str, object]]
 
 
 def iter_active_benchmark_cases() -> Iterator[BenchmarkCase]:
@@ -66,7 +70,18 @@ def iter_active_benchmark_cases() -> Iterator[BenchmarkCase]:
                                             run_index=run_index,
                                             condition_name=condition_name,
                                             suppression_mode=suppression_mode,
+                                            suppression_parameters=SUPPRESSION_PARAMETERS[
+                                                suppression_mode
+                                            ].copy(),
                                             mitigation_techniques=tuple(
                                                 condition["mitigation_techniques"]
                                             ),
+                                            mitigation_parameters={
+                                                technique: MITIGATION_PARAMETERS[
+                                                    technique
+                                                ].copy()
+                                                for technique in condition[
+                                                    "mitigation_techniques"
+                                                ]
+                                            },
                                         )
